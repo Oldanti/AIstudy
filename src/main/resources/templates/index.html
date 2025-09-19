@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI智能体对话</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 0;
+            min-height: 600px;
+        }
+        
+        .config-panel {
+            background: #f8f9fa;
+            padding: 30px;
+            border-right: 1px solid #e9ecef;
+        }
+        
+        .chat-panel {
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(86, 171, 47, 0.4);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        .chat-container {
+            flex: 1;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            overflow-y: auto;
+            max-height: 400px;
+            background: #fafafa;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        
+        .message.user {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+        
+        .message.ai {
+            background: white;
+            color: #333;
+            border: 1px solid #e9ecef;
+            margin-right: auto;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .input-group input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .input-group input:focus {
+            outline: none;
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4facfe;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+         @media (max-width: 768px) {
+             .main-content {
+                 grid-template-columns: 1fr;
+             }
+             
+             .config-panel {
+                 border-right: none;
+                 border-bottom: 1px solid #e9ecef;
+             }
+         }
+         
+         /* 认证相关样式 */
+         .auth-buttons {
+             margin-top: 15px;
+         }
+         
+         .user-info {
+             margin-top: 15px;
+             display: flex;
+             align-items: center;
+             gap: 15px;
+         }
+         
+         .btn-secondary {
+             background: linear-gradient(135deg, #6c757d 0%, #adb5bd 100%);
+             color: white;
+         }
+         
+         .btn-secondary:hover {
+             transform: translateY(-2px);
+             box-shadow: 0 5px 15px rgba(108, 117, 125, 0.4);
+         }
+         
+         /* 模态框样式 */
+         .modal {
+             display: none;
+             position: fixed;
+             z-index: 1000;
+             left: 0;
+             top: 0;
+             width: 100%;
+             height: 100%;
+             background-color: rgba(0,0,0,0.5);
+         }
+         
+         .modal.show {
+             display: flex;
+             align-items: center;
+             justify-content: center;
+         }
+         
+         .modal-content {
+             background-color: white;
+             padding: 30px;
+             border-radius: 15px;
+             width: 90%;
+             max-width: 400px;
+             box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+         }
+         
+         .modal-header {
+             text-align: center;
+             margin-bottom: 20px;
+         }
+         
+         .modal-header h3 {
+             color: #495057;
+             margin-bottom: 10px;
+         }
+         
+         .close {
+             color: #aaa;
+             float: right;
+             font-size: 28px;
+             font-weight: bold;
+             cursor: pointer;
+         }
+         
+         .close:hover {
+             color: #000;
+         }
+         
+         .form-group {
+             margin-bottom: 20px;
+         }
+         
+         .form-group label {
+             display: block;
+             margin-bottom: 8px;
+             font-weight: 600;
+             color: #495057;
+         }
+         
+         .form-control {
+             width: 100%;
+             padding: 12px 15px;
+             border: 2px solid #e9ecef;
+             border-radius: 8px;
+             font-size: 14px;
+             transition: all 0.3s ease;
+         }
+         
+         .form-control:focus {
+             outline: none;
+             border-color: #4facfe;
+             box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+         }
+         
+         .modal-footer {
+             text-align: center;
+             margin-top: 20px;
+         }
+         
+         .modal-footer .btn {
+             margin: 0 5px;
+         }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <div class="header">
+                <h1>🤖 AI智能体对话</h1>
+                <p>配置您的AI服务，开始智能对话</p>
+                <div v-if="!isLoggedIn" class="auth-buttons">
+                    <button @click="showLogin = true" class="btn btn-primary">登录</button>
+                    <button @click="showRegister = true" class="btn btn-success">注册</button>
+                </div>
+                <div v-else class="user-info">
+                    <span>欢迎，{{ currentUser.username }}！</span>
+                    <button @click="logout" class="btn btn-secondary">退出</button>
+                </div>
+            </div>
+            
+            <div class="main-content">
+                <!-- 配置面板 -->
+                <div class="config-panel" v-if="isLoggedIn">
+                    <h3 style="margin-bottom: 20px; color: #495057;">⚙️ 服务配置</h3>
+                    
+                    <div class="form-group">
+                        <label for="url">API URL:</label>
+                        <input 
+                            type="text" 
+                            id="url" 
+                            v-model="config.url" 
+                            class="form-control" 
+                            placeholder="https://api.openai.com"
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="apiKey">API密钥:</label>
+                        <input 
+                            type="password" 
+                            id="apiKey" 
+                            v-model="config.apiKey" 
+                            class="form-control" 
+                            placeholder="输入您的API密钥"
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="model">选择模型:</label>
+                        <select 
+                            id="model" 
+                            v-model="config.selectedModel" 
+                            class="form-control"
+                            :disabled="models.length === 0"
+                        >
+                            <option value="">请先获取模型列表</option>
+                            <option v-for="model in models" :key="model.id" :value="model.id">
+                                {{ model.name }}
+                            </option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <button 
+                            @click="loadModels" 
+                            class="btn btn-primary"
+                            :disabled="loading"
+                        >
+                            <span v-if="loading" class="loading"></span>
+                            {{ loading ? '获取中...' : '🔗 获取模型列表' }}
+                        </button>
+                        
+                        <button 
+                            @click="saveConfig" 
+                            class="btn btn-success"
+                            :disabled="!config.selectedModel"
+                        >
+                            💾 保存配置
+                        </button>
+                    </div>
+                    
+                    <div v-if="status" :class="['status', status.type]">
+                        {{ status.message }}
+                    </div>
+                </div>
+                
+                <!-- 聊天面板 -->
+                <div class="chat-panel" v-if="isLoggedIn">
+                    <h3 style="margin-bottom: 20px; color: #495057;">💬 智能对话</h3>
+                    
+                    <div class="chat-container" ref="chatContainer">
+                        <div v-if="messages.length === 0" style="text-align: center; color: #6c757d; padding: 40px;">
+                            开始您的AI对话之旅吧！👋
+                        </div>
+                        <div 
+                            v-for="(message, index) in messages" 
+                            :key="index" 
+                            :class="['message', message.role]"
+                        >
+                            {{ message.content }}
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <input 
+                            v-model="currentMessage" 
+                            @keyup.enter="sendMessage"
+                            placeholder="输入您的问题..."
+                            :disabled="!config.selectedModel || sending"
+                        >
+                        <button 
+                            @click="sendMessage" 
+                            class="btn btn-primary"
+                            :disabled="!currentMessage || !config.selectedModel || sending"
+                        >
+                            <span v-if="sending" class="loading"></span>
+                            {{ sending ? '发送中...' : '发送' }}
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 未登录提示 -->
+                <div v-if="!isLoggedIn" class="login-prompt">
+                    <div style="text-align: center; padding: 60px 20px;">
+                        <h3 style="color: #6c757d; margin-bottom: 20px;">🔐 请先登录</h3>
+                        <p style="color: #6c757d; margin-bottom: 30px;">登录后即可配置AI服务并开始智能对话</p>
+                        <button @click="showLogin = true" class="btn btn-primary" style="margin-right: 10px;">登录</button>
+                        <button @click="showRegister = true" class="btn btn-success">注册</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 登录模态框 -->
+        <div id="loginModal" class="modal" :class="{ show: showLogin }">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span class="close" @click="showLogin = false">&times;</span>
+                    <h3>🔐 用户登录</h3>
+                </div>
+                <form @submit.prevent="login">
+                    <div class="form-group">
+                        <label for="loginUsername">用户名:</label>
+                        <input 
+                            type="text" 
+                            id="loginUsername" 
+                            v-model="loginForm.username" 
+                            class="form-control" 
+                            placeholder="请输入用户名"
+                            required
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">密码:</label>
+                        <input 
+                            type="password" 
+                            id="loginPassword" 
+                            v-model="loginForm.password" 
+                            class="form-control" 
+                            placeholder="请输入密码"
+                            required
+                        >
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary" :disabled="loginLoading">
+                            <span v-if="loginLoading" class="loading"></span>
+                            {{ loginLoading ? '登录中...' : '登录' }}
+                        </button>
+                        <button type="button" class="btn btn-secondary" @click="showLogin = false">取消</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- 注册模态框 -->
+        <div id="registerModal" class="modal" :class="{ show: showRegister }">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span class="close" @click="showRegister = false">&times;</span>
+                    <h3>📝 用户注册</h3>
+                </div>
+                <form @submit.prevent="register">
+                    <div class="form-group">
+                        <label for="registerUsername">用户名:</label>
+                        <input 
+                            type="text" 
+                            id="registerUsername" 
+                            v-model="registerForm.username" 
+                            class="form-control" 
+                            placeholder="请输入用户名"
+                            required
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="registerEmail">邮箱:</label>
+                        <input 
+                            type="email" 
+                            id="registerEmail" 
+                            v-model="registerForm.email" 
+                            class="form-control" 
+                            placeholder="请输入邮箱"
+                            required
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPassword">密码:</label>
+                        <input 
+                            type="password" 
+                            id="registerPassword" 
+                            v-model="registerForm.password" 
+                            class="form-control" 
+                            placeholder="请输入密码"
+                            required
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">确认密码:</label>
+                        <input 
+                            type="password" 
+                            id="confirmPassword" 
+                            v-model="registerForm.confirmPassword" 
+                            class="form-control" 
+                            placeholder="请再次输入密码"
+                            required
+                        >
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success" :disabled="registerLoading">
+                            <span v-if="registerLoading" class="loading"></span>
+                            {{ registerLoading ? '注册中...' : '注册' }}
+                        </button>
+                        <button type="button" class="btn btn-secondary" @click="showRegister = false">取消</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+        
+        createApp({
+            data() {
+                return {
+                    config: {
+                        url: '',
+                        apiKey: '',
+                        selectedModel: ''
+                    },
+                    models: [],
+                    messages: [],
+                    currentMessage: '',
+                    loading: false,
+                    sending: false,
+                    status: null,
+                    // 认证相关
+                    isLoggedIn: false,
+                    currentUser: null,
+                    showLogin: false,
+                    showRegister: false,
+                    loginForm: {
+                        username: '',
+                        password: ''
+                    },
+                    registerForm: {
+                        username: '',
+                        email: '',
+                        password: '',
+                        confirmPassword: ''
+                    },
+                    loginLoading: false,
+                    registerLoading: false
+                }
+            },
+            mounted() {
+                this.checkLoginStatus();
+                this.loadConfig();
+            },
+            methods: {
+                async loadConfig() {
+                    try {
+                        const response = await axios.get('/api/config');
+                        this.config = response.data;
+                    } catch (error) {
+                        console.log('未找到保存的配置');
+                    }
+                },
+                
+                async loadModels() {
+                    if (!this.config.url || !this.config.apiKey) {
+                        this.showStatus('请先填写URL和API密钥', 'error');
+                        return;
+                    }
+                    
+                    this.loading = true;
+                    this.status = null;
+                    
+                     try {
+                         const response = await axios.post('/api/models', this.config);
+                         this.models = response.data;
+                         this.showStatus(`成功获取 ${this.models.length} 个模型`, 'success');
+                     } catch (error) {
+                         console.error('获取模型列表错误:', error);
+                         let errorMessage = '获取模型列表失败: ';
+                         if (error.response) {
+                             errorMessage += `状态码: ${error.response.status}, 响应: ${JSON.stringify(error.response.data)}`;
+                         } else if (error.request) {
+                             errorMessage += '网络请求失败，请检查URL是否正确';
+                         } else {
+                             errorMessage += error.message;
+                         }
+                         this.showStatus(errorMessage, 'error');
+                     } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                async saveConfig() {
+                    if (!this.config.selectedModel) {
+                        this.showStatus('请先选择模型', 'error');
+                        return;
+                    }
+                    
+                    try {
+                        await axios.post('/api/config', this.config);
+                        this.showStatus('配置保存成功', 'success');
+                    } catch (error) {
+                        this.showStatus('配置保存失败: ' + (error.response?.data || error.message), 'error');
+                    }
+                },
+                
+                async sendMessage() {
+                    if (!this.currentMessage.trim() || !this.config.selectedModel) {
+                        return;
+                    }
+                    
+                    const userMessage = this.currentMessage.trim();
+                    this.currentMessage = '';
+                    
+                    // 添加用户消息
+                    this.messages.push({
+                        role: 'user',
+                        content: userMessage
+                    });
+                    
+                    this.sending = true;
+                    this.scrollToBottom();
+                    
+                    try {
+                        const response = await axios.post('/api/chat', userMessage);
+                        this.messages.push({
+                            role: 'ai',
+                            content: response.data
+                        });
+                    } catch (error) {
+                        this.messages.push({
+                            role: 'ai',
+                            content: '抱歉，发送消息失败: ' + (error.response?.data || error.message)
+                        });
+                    } finally {
+                        this.sending = false;
+                        this.scrollToBottom();
+                    }
+                },
+                
+                scrollToBottom() {
+                    this.$nextTick(() => {
+                        const container = this.$refs.chatContainer;
+                        container.scrollTop = container.scrollHeight;
+                    });
+                },
+                
+                showStatus(message, type) {
+                    this.status = { message, type };
+                    setTimeout(() => {
+                        this.status = null;
+                    }, 3000);
+                },
+                
+                // 认证相关方法
+                async checkLoginStatus() {
+                    try {
+                        const response = await axios.get('/api/auth/current-user');
+                        if (response.data.success) {
+                            this.isLoggedIn = true;
+                            this.currentUser = response.data.user;
+                        } else {
+                            this.isLoggedIn = false;
+                            this.currentUser = null;
+                        }
+                    } catch (error) {
+                        this.isLoggedIn = false;
+                        this.currentUser = null;
+                    }
+                },
+                
+                async login() {
+                    if (!this.loginForm.username || !this.loginForm.password) {
+                        this.showStatus('请输入用户名和密码', 'error');
+                        return;
+                    }
+                    
+                    this.loginLoading = true;
+                    
+                    try {
+                        const response = await axios.post('/api/auth/login', this.loginForm);
+                        if (response.data.success) {
+                            this.isLoggedIn = true;
+                            this.currentUser = response.data.user;
+                            this.showLogin = false;
+                            this.loginForm = { username: '', password: '' };
+                            this.showStatus('登录成功', 'success');
+                            this.loadConfig(); // 重新加载配置
+                        } else {
+                            this.showStatus(response.data.message, 'error');
+                        }
+                    } catch (error) {
+                        this.showStatus('登录失败: ' + (error.response?.data?.message || error.message), 'error');
+                    } finally {
+                        this.loginLoading = false;
+                    }
+                },
+                
+                async register() {
+                    if (!this.registerForm.username || !this.registerForm.email || 
+                        !this.registerForm.password || !this.registerForm.confirmPassword) {
+                        this.showStatus('请填写所有字段', 'error');
+                        return;
+                    }
+                    
+                    if (this.registerForm.password !== this.registerForm.confirmPassword) {
+                        this.showStatus('两次输入的密码不一致', 'error');
+                        return;
+                    }
+                    
+                    this.registerLoading = true;
+                    
+                    try {
+                        const response = await axios.post('/api/auth/register', {
+                            username: this.registerForm.username,
+                            email: this.registerForm.email,
+                            password: this.registerForm.password
+                        });
+                        
+                        if (response.data.success) {
+                            this.isLoggedIn = true;
+                            this.currentUser = response.data.user;
+                            this.showRegister = false;
+                            this.registerForm = { username: '', email: '', password: '', confirmPassword: '' };
+                            this.showStatus('注册成功', 'success');
+                        } else {
+                            this.showStatus(response.data.message, 'error');
+                        }
+                    } catch (error) {
+                        this.showStatus('注册失败: ' + (error.response?.data?.message || error.message), 'error');
+                    } finally {
+                        this.registerLoading = false;
+                    }
+                },
+                
+                async logout() {
+                    try {
+                        await axios.post('/api/auth/logout');
+                        this.isLoggedIn = false;
+                        this.currentUser = null;
+                        this.config = { url: '', apiKey: '', selectedModel: '' };
+                        this.models = [];
+                        this.messages = [];
+                        this.showStatus('已退出登录', 'success');
+                    } catch (error) {
+                        this.showStatus('退出失败: ' + error.message, 'error');
+                    }
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
